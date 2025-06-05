@@ -20,6 +20,7 @@
       /* Em telas muito largas, centraliza o conteúdo */
       max-width: 1200px;
       margin: 0 auto;
+      padding-bottom: 80px; /* Espaço para a barra de carrinho fixa */
     }
 
     h2 {
@@ -111,6 +112,43 @@
     .card button:hover {
       background: #1ebe5a;
     }
+    .card button.adicionado {
+      background: #cccccc;
+      cursor: default;
+    }
+
+    /* Barra fixa de preview do carrinho */
+    #carrinho-preview {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: #ffffff;
+      border-top: 1px solid #ddd;
+      padding: 12px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 1rem;
+      box-shadow: 0 -2px 6px rgba(0,0,0,0.1);
+      z-index: 100;
+    }
+    #carrinho-preview p {
+      margin: 0;
+    }
+    #carrinho-preview button {
+      background: #25d366;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 1rem;
+      transition: background 0.2s;
+    }
+    #carrinho-preview button:hover {
+      background: #1ebe5a;
+    }
 
     /* ======= RESPONSIVO ======= */
 
@@ -148,6 +186,13 @@
       .card button {
         font-size: 0.95rem;
         padding: 8px;
+      }
+      #carrinho-preview {
+        padding: 10px 15px;
+        font-size: 0.95rem;
+      }
+      #carrinho-preview button {
+        font-size: 0.95rem;
       }
     }
 
@@ -190,6 +235,18 @@
         font-size: 0.9rem;
         padding: 7px;
       }
+      #carrinho-preview {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+        font-size: 0.9rem;
+        padding: 8px 10px;
+      }
+      #carrinho-preview button {
+        font-size: 0.9rem;
+        padding: 6px 12px;
+        align-self: stretch;
+      }
     }
   </style>
 </head>
@@ -198,11 +255,35 @@
   <h2>🛒 Produtos Disponíveis</h2>
   <div class="grid" id="vitrine"></div>
 
+  <!-- Barra fixa de preview do carrinho -->
+  <div id="carrinho-preview" style="display: none;">
+    <p id="carrinho-info">0 itens no carrinho</p>
+    <button id="btn-enviar-carrinho">Enviar Pedido</button>
+  </div>
+
   <script>
     const vitrine = document.getElementById("vitrine");
-    // URL REST do seu Realtime Database (nó "mercadorias")
-    const FIREBASE_URL = "https://mercado-8d654-default-rtdb.firebaseio.com";
+    const carrinhoPreview = document.getElementById("carrinho-preview");
+    const carrinhoInfo = document.getElementById("carrinho-info");
+    const btnEnviarCarrinho = document.getElementById("btn-enviar-carrinho");
 
+    // Array que armazenará os itens adicionados ao carrinho
+    // Cada item: { nome, quantidade, valorUnitarioNum, formaPagamento }
+    const carrinho = [];
+
+    // Função para atualizar a barra de carrinho fixa
+    function atualizarCarrinhoPreview() {
+      if (carrinho.length === 0) {
+        carrinhoPreview.style.display = 'none';
+      } else {
+        carrinhoPreview.style.display = 'flex';
+        // Número de itens distintos no carrinho
+        carrinhoInfo.textContent = `${carrinho.length} item(s) no carrinho`;
+      }
+    }
+
+    // Fazer fetch dos produtos no Firebase Realtime Database
+    const FIREBASE_URL = "https://mercado-8d654-default-rtdb.firebaseio.com";
     fetch(`${FIREBASE_URL}/mercadorias.json`)
       .then(res => {
         if (!res.ok) throw new Error("Erro ao conectar ao Firebase");
@@ -221,11 +302,11 @@
             const quantidadeDisponivel = parseInt(item.quantidade || "1", 10);
             // Transforma string "valor" em número (assumindo vírgula como separador)
             const valorUnitarioNum = Number((item.valor || "0,00").replace(".", "").replace(",", "."));
+
             // Função para formatar número em "0,00"
             function formatCurrency(num) {
               return num.toFixed(2).replace(".", ",");
             }
-            const valorUnitarioFmt = formatCurrency(valorUnitarioNum);
 
             // Cria o card
             const card = document.createElement("div");
@@ -234,7 +315,7 @@
               <img src="${imagem}">
               <h3>${nome}</h3>
               <p>Disponível: ${quantidadeDisponivel}</p>
-              <p>R$ ${valorUnitarioFmt} (unitário)</p>
+              <p>R$ ${formatCurrency(valorUnitarioNum)} (unitário)</p>
 
               <label for="quant_${nome}">Quantidade:</label>
               <input 
@@ -256,8 +337,8 @@
 
               <p class="total">Total: R$ ${formatCurrency(valorUnitarioNum)}</p>
 
-              <button type="button" onclick="enviarPedido(this, '${nome}', ${valorUnitarioNum})">
-                Pedir via WhatsApp
+              <button type="button" class="btn-carrinho" data-nome="${nome}" data-valor="${valorUnitarioNum}">
+                Adicionar ao carrinho
               </button>
             `;
             vitrine.appendChild(card);
@@ -273,6 +354,34 @@
               const totalNum = valorUnitarioNum * qtd;
               totalParagrafo.textContent = `Total: R$ ${formatCurrency(totalNum)}`;
             });
+
+            // Gerenciar clique no botão “Adicionar ao carrinho”
+            const btnCarrinho = card.querySelector(".btn-carrinho");
+            btnCarrinho.addEventListener("click", () => {
+              const quantidade = parseInt(inputQuantidade.value, 10);
+              const formaPagto = card.querySelector(".pagamento-select").value;
+
+              // Verifica se já existe esse produto no carrinho
+              const idx = carrinho.findIndex(prod => prod.nome === nome);
+              if (idx === -1) {
+                // Adiciona novo item ao carrinho
+                carrinho.push({
+                  nome: nome,
+                  quantidade: quantidade,
+                  valorUnitarioNum: valorUnitarioNum,
+                  formaPagamento: formaPagto
+                });
+                btnCarrinho.textContent = "Remover do carrinho";
+                btnCarrinho.classList.add("adicionado");
+              } else {
+                // Remove do carrinho
+                carrinho.splice(idx, 1);
+                btnCarrinho.textContent = "Adicionar ao carrinho";
+                btnCarrinho.classList.remove("adicionado");
+              }
+
+              atualizarCarrinhoPreview();
+            });
           });
         });
       })
@@ -281,40 +390,33 @@
         vitrine.innerHTML = "<p style='text-align:center; color:red;'>Erro ao carregar produtos.</p>";
       });
 
-    /**
-     * @param {HTMLButtonElement} botao 
-     * @param {string} nomeProduto 
-     * @param {number} valorUnitarioNum  (número, ex: 10.50)
-     */
-    function enviarPedido(botao, nomeProduto, valorUnitarioNum) {
-      const card = botao.closest(".card");
-      const inputQuantidade = card.querySelector(".quantidade-input");
-      const selectPagamento = card.querySelector(".pagamento-select");
+    // Ao clicar em “Enviar Pedido” na barra fixa:
+    btnEnviarCarrinho.addEventListener("click", () => {
+      if (carrinho.length === 0) return;
 
-      // Lê a quantidade escolhida
-      let qtdEscolhida = parseInt(inputQuantidade.value, 10);
-      if (isNaN(qtdEscolhida) || qtdEscolhida < 1) qtdEscolhida = 1;
+      // Monta a mensagem com todos os itens e subtotais
+      let mensagem = `Olá! Gostaria de fazer o pedido dos seguintes produtos:%0A%0A`;
+      let valorTotalGeral = 0;
 
-      const formaPagamento = selectPagamento.value;
+      carrinho.forEach((produto, index) => {
+        const { nome, quantidade, valorUnitarioNum, formaPagamento } = produto;
+        const subtotal = valorUnitarioNum * quantidade;
+        valorTotalGeral += subtotal;
+        mensagem +=
+          `▶ ${nome}%0A` +
+          `   - Quantidade: ${quantidade}%0A` +
+          `   - Valor unitário: R$ ${valorUnitarioNum.toFixed(2).replace(".", ",")}%0A` +
+          `   - Subtotal: R$ ${subtotal.toFixed(2).replace(".", ",")}%0A` +
+          `   - Forma de Pagamento: ${formaPagamento}%0A%0A`;
+      });
 
-      // Calcula total
-      const totalNum = valorUnitarioNum * qtdEscolhida;
-      // Formata para "0,00"
-      const totalFmt = totalNum.toFixed(2).replace(".", ",");
+      mensagem += `Valor Total Geral: R$ ${valorTotalGeral.toFixed(2).replace(".", ",")}`;
 
-      // Monta mensagem do WhatsApp
-      const numero = "5581995038049";
-      const texto = 
-        `Olá! Gostaria de fazer o pedido do produto:%0A` +
-        `📦 Produto: ${nomeProduto}%0A` +
-        `🔢 Quantidade: ${qtdEscolhida}%0A` +
-        `💰 Valor unitário: R$ ${valorUnitarioNum.toFixed(2).replace(".", ",")}%0A` +
-        `🧾 Total: R$ ${totalFmt}%0A` +
-        `💳 Forma de Pagamento: ${formaPagamento}`;
+      const numeroLoja = "5581995038049";
+      const url = `https://wa.me/${numeroLoja}?text=${mensagem}`;
 
-      const url = `https://wa.me/${numero}?text=${texto}`;
       window.open(url, "_blank");
-    }
+    });
   </script>
 </body>
 </html>
