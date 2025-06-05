@@ -45,8 +45,32 @@
     }
 
     .card p {
-      margin: 2px 0;
+      margin: 4px 0;
       font-size: 14px;
+    }
+
+    .card label {
+      display: block;
+      margin: 8px 0 4px;
+      font-size: 14px;
+      text-align: left;
+    }
+
+    .card input[type="number"],
+    .card select {
+      width: 100%;
+      padding: 6px 8px;
+      font-size: 14px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      box-sizing: border-box;
+      margin-bottom: 8px;
+    }
+
+    .card .total {
+      font-weight: bold;
+      margin-top: 4px;
+      font-size: 16px;
     }
 
     .card button {
@@ -58,6 +82,7 @@
       border-radius: 6px;
       cursor: pointer;
       font-size: 14px;
+      width: 100%;
     }
   </style>
 </head>
@@ -66,59 +91,122 @@
   <h2>🛒 Produtos Disponíveis</h2>
   <div class="grid" id="vitrine"></div>
 
-  <!-- Firebase -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
-
   <script>
-const firebaseConfig = {
-  apiKey: "AIzaSyDOYhFAUl9eytYMdLA-kyhNvrV5GrXgJQU",
-  authDomain: "mercado-8d654.firebaseapp.com",
-  projectId: "mercado-8d654",
-  storageBucket: "mercado-8d654.firebasestorage.app",
-  messagingSenderId: "269749626632",
-  appId: "1:269749626632:web:8c30643a1cc52b56672ebd",
-  measurementId: "G-9DGXDT4451"
-
-};
-
-    firebase.initializeApp(firebaseConfig);
-
     const vitrine = document.getElementById("vitrine");
+    // URL REST do seu Realtime Database (nó "mercadorias")
+    const FIREBASE_URL = "https://mercado-8d654-default-rtdb.firebaseio.com";
 
-    firebase.database().ref("mercadorias").once("value").then(snapshot => {
-      if (!snapshot.exists()) {
-        vitrine.innerHTML = "<p style='text-align:center;'>Nenhum produto disponível no momento.</p>";
-        return;
-      }
+    fetch(`${FIREBASE_URL}/mercadorias.json`)
+      .then(res => {
+        if (!res.ok) throw new Error("Erro ao conectar ao Firebase");
+        return res.json();
+      })
+      .then(data => {
+        if (!data || Object.keys(data).length === 0) {
+          vitrine.innerHTML = "<p style='text-align:center;'>Nenhum produto disponível no momento.</p>";
+          return;
+        }
 
-      snapshot.forEach(userNode => {
-        userNode.forEach(itemNode => {
-          const item = itemNode.val();
-          const imagem = item.imagem || "https://via.placeholder.com/300x150?text=Sem+Imagem";
-          const nome = item.produto || "Sem Nome";
-          const quantidade = item.quantidade || "1";
-          const valor = item.valor || "0,00";
+        Object.values(data).forEach(userNode => {
+          Object.values(userNode).forEach(item => {
+            const imagem = item.imagem || "https://via.placeholder.com/300x150?text=Sem+Imagem";
+            const nome = item.produto || "Sem Nome";
+            const quantidadeDisponivel = parseInt(item.quantidade || "1", 10);
+            // transforma string "valor" em número, assumindo vírgula como separador
+            const valorUnitarioNum = Number((item.valor || "0,00").replace(".", "").replace(",", "."));
+            // formata número para "0,00"
+            function formatCurrency(num) {
+              return num.toFixed(2).replace(".", ",");
+            }
+            const valorUnitarioFmt = formatCurrency(valorUnitarioNum);
 
-          const card = document.createElement("div");
-          card.className = "card";
-          card.innerHTML = `
-            <img src="${imagem}">
-            <h3>${nome}</h3>
-            <p>Quantidade: ${quantidade}</p>
-            <p>R$ ${valor}</p>
-            <button onclick="enviarPedido('${nome}', '${quantidade}', '${valor}')">Pedir via WhatsApp</button>
-          `;
-          vitrine.appendChild(card);
+            // Cria o card
+            const card = document.createElement("div");
+            card.className = "card";
+            card.innerHTML = `
+              <img src="${imagem}">
+              <h3>${nome}</h3>
+              <p>Disponível: ${quantidadeDisponivel}</p>
+              <p>R$ ${valorUnitarioFmt} (unitário)</p>
+
+              <label for="quant_${nome}">Quantidade:</label>
+              <input 
+                type="number" 
+                id="quant_${nome}" 
+                class="quantidade-input" 
+                min="1" 
+                max="${quantidadeDisponivel}" 
+                value="1"
+              >
+
+              <label for="pagto_${nome}">Forma de Pagamento:</label>
+              <select id="pagto_${nome}" class="pagamento-select">
+                <option value="Pix">Pix</option>
+                <option value="Dinheiro">Dinheiro</option>
+                <option value="Cartão de Crédito">Cartão de Crédito</option>
+                <option value="Cartão de Débito">Cartão de Débito</option>
+              </select>
+
+              <p class="total">Total: R$ ${formatCurrency(valorUnitarioNum)}</p>
+
+              <button type="button" onclick="enviarPedido(this, '${nome}', ${valorUnitarioNum})">
+                Pedir via WhatsApp
+              </button>
+            `;
+            vitrine.appendChild(card);
+
+            // Atualizar o total quando a quantidade mudar
+            const inputQuantidade = card.querySelector(".quantidade-input");
+            const totalParagrafo = card.querySelector(".total");
+            inputQuantidade.addEventListener("input", () => {
+              let qtd = parseInt(inputQuantidade.value, 10);
+              if (isNaN(qtd) || qtd < 1) qtd = 1;
+              if (qtd > quantidadeDisponivel) qtd = quantidadeDisponivel;
+              inputQuantidade.value = qtd;
+              const totalNum = valorUnitarioNum * qtd;
+              totalParagrafo.textContent = `Total: R$ ${formatCurrency(totalNum)}`;
+            });
+          });
         });
+      })
+      .catch(err => {
+        console.error(err);
+        vitrine.innerHTML = "<p style='text-align:center; color:red;'>Erro ao carregar produtos.</p>";
       });
-    });
 
-    function enviarPedido(produto, quantidade, valor) {
-      const numero = "5581995038049"; // Substitua pelo número da loja com DDD (formato internacional)
-      const texto = `Olá! Gostaria de pedir o seguinte produto:\n\n📦 Produto: ${produto}\n📦 Quantidade: ${quantidade}\n💰 Valor: R$ ${valor}`;
-      const url = `https://wa.me/${numero}?text=${encodeURIComponent(texto)}`;
-      window.open(url, '_blank');
+    /**
+     * @param {HTMLButtonElement} botao 
+     * @param {string} nomeProduto 
+     * @param {number} valorUnitarioNum  (número, ex: 10.50)
+     */
+    function enviarPedido(botao, nomeProduto, valorUnitarioNum) {
+      const card = botao.closest(".card");
+      const inputQuantidade = card.querySelector(".quantidade-input");
+      const selectPagamento = card.querySelector(".pagamento-select");
+
+      // Lê a quantidade escolhida
+      let qtdEscolhida = parseInt(inputQuantidade.value, 10);
+      if (isNaN(qtdEscolhida) || qtdEscolhida < 1) qtdEscolhida = 1;
+
+      const formaPagamento = selectPagamento.value;
+
+      // Calcula total
+      const totalNum = valorUnitarioNum * qtdEscolhida;
+      // Formata para "0,00"
+      const totalFmt = totalNum.toFixed(2).replace(".", ",");
+
+      // Monta mensagem do WhatsApp
+      const numero = "5581995038049";
+      const texto = 
+        `Olá! Gostaria de fazer o pedido do produto:%0A` +
+        `📦 Produto: ${nomeProduto}%0A` +
+        `🔢 Quantidade: ${qtdEscolhida}%0A` +
+        `💰 Valor unitário: R$ ${valorUnitarioNum.toFixed(2).replace(".", ",")}%0A` +
+        `🧾 Total: R$ ${totalFmt}%0A` +
+        `💳 Forma de Pagamento: ${formaPagamento}`;
+
+      const url = `https://wa.me/${numero}?text=${texto}`;
+      window.open(url, "_blank");
     }
   </script>
 </body>
