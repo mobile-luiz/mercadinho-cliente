@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Vitrine de Produtos</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f0f0;
+      margin: 0;
+      padding: 20px;
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 20px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .card {
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      padding: 16px;
+      text-align: center;
+    }
+
+    .card img {
+      width: 100%;
+      height: 150px;
+      object-fit: cover;
+      border-radius: 8px;
+    }
+
+    .card h3 {
+      margin: 12px 0 4px;
+      font-size: 18px;
+    }
+
+    .card p {
+      margin: 2px 0;
+      font-size: 14px;
+    }
+
+    .card button {
+      margin-top: 10px;
+      background: #25d366;
+      color: white;
+      border: none;
+      padding: 8px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>🛒 Produtos Disponíveis</h2>
+  <div class="grid" id="vitrine"></div>
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+
+  <script>
+const firebaseConfig = {
+  apiKey: "AIzaSyDOYhFAUl9eytYMdLA-kyhNvrV5GrXgJQU",
+  authDomain: "mercado-8d654.firebaseapp.com",
+  projectId: "mercado-8d654",
+  storageBucket: "mercado-8d654.firebasestorage.app",
+  messagingSenderId: "269749626632",
+  appId: "1:269749626632:web:8c30643a1cc52b56672ebd",
+  measurementId: "G-9DGXDT4451"
+
+};
+
+    firebase.initializeApp(firebaseConfig);
+
+    const vitrine = document.getElementById("vitrine");
+
+    firebase.database().ref("mercadorias").once("value").then(snapshot => {
+      if (!snapshot.exists()) {
+        vitrine.innerHTML = "<p style='text-align:center;'>Nenhum produto disponível no momento.</p>";
+        return;
+      }
+
+      snapshot.forEach(userNode => {
+        userNode.forEach(itemNode => {
+          const item = itemNode.val();
+          const imagem = item.imagem || "https://via.placeholder.com/300x150?text=Sem+Imagem";
+          const nome = item.produto || "Sem Nome";
+          const quantidade = item.quantidade || "1";
+          const valor = item.valor || "0,00";
+
+          const card = document.createElement("div");
+          card.className = "card";
+          card.innerHTML = `
+            <img src="${imagem}">
+            <h3>${nome}</h3>
+            <p>Quantidade: ${quantidade}</p>
+            <p>R$ ${valor}</p>
+            <button onclick="enviarPedido('${nome}', '${quantidade}', '${valor}')">Pedir via WhatsApp</button>
+          `;
+          vitrine.appendChild(card);
+        });
+      });
+    });
+
+    function enviarPedido(produto, quantidade, valor) {
+      const numero = "5581995038049"; // Substitua pelo número da loja com DDD (formato internacional)
+      const texto = `Olá! Gostaria de pedir o seguinte produto:\n\n📦 Produto: ${produto}\n📦 Quantidade: ${quantidade}\n💰 Valor: R$ ${valor}`;
+      const url = `https://wa.me/${numero}?text=${encodeURIComponent(texto)}`;
+      window.open(url, '_blank');
+    }
+  </script>
+</body>
+</html>
