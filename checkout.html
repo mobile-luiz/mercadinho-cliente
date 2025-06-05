@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <!-- Meta para tornar responsivo em mobile -->
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Checkout - Dados de Entrega</title>
+  <style>
+    /* Reset básico de margens/paddings */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f0f0;
+      padding: 20px;
+      max-width: 800px;
+      margin: 0 auto;
+      padding-bottom: 100px; /* espaço para botão de envio */
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+      font-size: 1.6rem;
+    }
+
+    /* Container do formulário */
+    .checkout-container {
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      padding: 20px;
+    }
+
+    /* Campos do formulário */
+    .checkout-group {
+      margin-bottom: 16px;
+    }
+    .checkout-group label {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 1rem;
+      color: #333;
+    }
+    .checkout-group input {
+      width: 100%;
+      padding: 8px 10px;
+      font-size: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    .checkout-group .erro-campo {
+      color: red;
+      font-size: 0.85rem;
+      margin-top: 4px;
+      display: none;
+    }
+
+    /* Resumo do carrinho */
+    .resumo-carrinho {
+      margin-top: 20px;
+    }
+    .resumo-carrinho h3 {
+      margin-bottom: 12px;
+      font-size: 1.2rem;
+      color: #333;
+    }
+    .resumo-item {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      font-size: 0.95rem;
+    }
+    .resumo-item span {
+      flex: 1;
+    }
+    .subtotal {
+      font-weight: bold;
+      text-align: right;
+      margin-top: 12px;
+      font-size: 1rem;
+    }
+
+    /* Botão “Enviar Pedido” */
+    #btn-enviar {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: #25d366;
+      color: white;
+      border: none;
+      padding: 12px 20px;
+      border-radius: 6px;
+      font-size: 1rem;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+      transition: background 0.2s;
+    }
+    #btn-enviar:disabled {
+      background: #999;
+      cursor: not-allowed;
+    }
+    #btn-enviar:hover:not(:disabled) {
+      background: #1ebe5a;
+    }
+
+    /* Responsivo */
+    @media (max-width: 600px) {
+      body {
+        padding: 15px;
+      }
+      h2 {
+        font-size: 1.4rem;
+      }
+      .checkout-group input {
+        font-size: 0.95rem;
+      }
+      .resumo-item {
+        font-size: 0.9rem;
+      }
+      .subtotal {
+        font-size: 0.95rem;
+      }
+      #btn-enviar {
+        bottom: 15px;
+        right: 15px;
+        padding: 10px 18px;
+        font-size: 0.95rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <h2>📝 Dados de Entrega</h2>
+  <div class="checkout-container">
+    <!-- Formulário de dados do cliente -->
+    <div class="checkout-group">
+      <label for="nome-cliente">Nome do Cliente <span style="color:red;">*</span></label>
+      <input type="text" id="nome-cliente" placeholder="Ex: João da Silva">
+      <div id="erro-nome-checkout" class="erro-campo">Nome é obrigatório.</div>
+    </div>
+
+    <div class="checkout-group">
+      <label for="endereco-cliente">Endereço <span style="color:red;">*</span></label>
+      <input type="text" id="endereco-cliente" placeholder="Ex: Rua A, 123">
+      <div id="erro-endereco-checkout" class="erro-campo">Endereço é obrigatório.</div>
+    </div>
+
+    <div class="checkout-group">
+      <label for="referencia-cliente">Ponto de Referência <span style="color:red;">*</span></label>
+      <input type="text" id="referencia-cliente" placeholder="Ex: Próximo ao mercado X">
+      <div id="erro-referencia-checkout" class="erro-campo">Ponto de referência é obrigatório.</div>
+    </div>
+
+    <!-- Resumo do carrinho -->
+    <div class="resumo-carrinho">
+      <h3>Resumo do Carrinho</h3>
+      <div id="lista-itens"></div>
+      <p class="subtotal" id="valor-total">Total Geral: R$ 0,00</p>
+    </div>
+  </div>
+
+  <!-- Botão para enviar o pedido pelo WhatsApp -->
+  <button id="btn-enviar" disabled>Enviar Pedido por WhatsApp</button>
+
+  <script>
+    // Referências a elementos do DOM
+    const nomeClienteInput = document.getElementById("nome-cliente");
+    const enderecoClienteInput = document.getElementById("endereco-cliente");
+    const referenciaClienteInput = document.getElementById("referencia-cliente");
+    const erroNome = document.getElementById("erro-nome-checkout");
+    const erroEndereco = document.getElementById("erro-endereco-checkout");
+    const erroReferencia = document.getElementById("erro-referencia-checkout");
+
+    const listaItensContainer = document.getElementById("lista-itens");
+    const valorTotalElem = document.getElementById("valor-total");
+    const btnEnviar = document.getElementById("btn-enviar");
+
+    // Carrega o carrinho do localStorage
+    let carrinho = [];
+    try {
+      const dados = localStorage.getItem("carrinho");
+      if (dados) {
+        carrinho = JSON.parse(dados);
+      }
+    } catch (e) {
+      console.error("Erro ao ler carrinho do localStorage:", e);
+      carrinho = [];
+    }
+
+    // Se o carrinho estiver vazio, redirecione de volta
+    if (!carrinho || carrinho.length === 0) {
+      alert("Carrinho vazio. Você será redirecionado para a vitrine.");
+      window.location.href = "index.html";
+    }
+
+    // Formata valor em “0,00”
+    function formatCurrency(num) {
+      return num.toFixed(2).replace(".", ",");
+    }
+
+    // Exibe os itens na tela e calcula o total
+    let totalGeral = 0;
+    carrinho.forEach(item => {
+      const { nome, quantidade, valorUnitarioNum, formaPagamento } = item;
+      const subtotal = quantidade * valorUnitarioNum;
+      totalGeral += subtotal;
+
+      // Cria bloco de resumo para cada produto
+      const divItem = document.createElement("div");
+      divItem.className = "resumo-item";
+      divItem.innerHTML = `
+        <span>${nome} (x${quantidade})</span>
+        <span>R$ ${formatCurrency(subtotal)}</span>
+      `;
+      listaItensContainer.appendChild(divItem);
+    });
+    valorTotalElem.textContent = `Total Geral: R$ ${formatCurrency(totalGeral)}`;
+
+    // Função que verifica se campos do cliente estão preenchidos
+    function validarCamposCliente() {
+      let ok = true;
+
+      if (nomeClienteInput.value.trim() === "") {
+        erroNome.style.display = "block";
+        ok = false;
+      } else {
+        erroNome.style.display = "none";
+      }
+      if (enderecoClienteInput.value.trim() === "") {
+        erroEndereco.style.display = "block";
+        ok = false;
+      } else {
+        erroEndereco.style.display = "none";
+      }
+      if (referenciaClienteInput.value.trim() === "") {
+        erroReferencia.style.display = "block";
+        ok = false;
+      } else {
+        erroReferencia.style.display = "none";
+      }
+
+      return ok;
+    }
+
+    // Habilita/desabilita o botão “Enviar Pedido” conforme validação
+    function atualizarBotaoEnviar() {
+      btnEnviar.disabled = !validarCamposCliente();
+    }
+
+    [nomeClienteInput, enderecoClienteInput, referenciaClienteInput].forEach(input => {
+      input.addEventListener("input", () => {
+        // Verifica se campos obrigatórios estão preenchidos
+        atualizarBotaoEnviar();
+      });
+    });
+
+    // Ao clicar em “Enviar Pedido”
+    btnEnviar.addEventListener("click", () => {
+      if (!validarCamposCliente()) return;
+
+      // Dados do cliente
+      const nomeCliente = nomeClienteInput.value.trim();
+      const enderecoCliente = enderecoClienteInput.value.trim();
+      const referenciaCliente = referenciaClienteInput.value.trim();
+
+      // Monta a mensagem de texto
+      let mensagem = "Olá! Seguem os dados do cliente:%0A";
+      mensagem += `👤 Nome: ${nomeCliente}%0A`;
+      mensagem += `🏠 Endereço: ${enderecoCliente}%0A`;
+      mensagem += `📍 Referência: ${referenciaCliente}%0A%0A`;
+
+      mensagem += "🛒 Pedido de Produtos:%0A%0A";
+      let valorTotal = 0;
+      carrinho.forEach(item => {
+        const { nome, quantidade, valorUnitarioNum, formaPagamento } = item;
+        const subtotal = quantidade * valorUnitarioNum;
+        valorTotal += subtotal;
+        mensagem +=
+          `▶ ${nome}%0A` +
+          `   - Quantidade: ${quantidade}%0A` +
+          `   - Valor unitário: R$ ${valorUnitarioNum.toFixed(2).replace(".", ",")}%0A` +
+          `   - Subtotal: R$ ${subtotal.toFixed(2).replace(".", ",")}%0A` +
+          `   - Forma de Pagamento: ${formaPagamento}%0A%0A`;
+      });
+      mensagem += `💰 Total Geral: R$ ${valorTotal.toFixed(2).replace(".", ",")}`;
+
+      const numeroLoja = "5581995038049";
+      const url = `https://wa.me/${numeroLoja}?text=${mensagem}`;
+      window.open(url, "_blank");
+
+      // Limpa o carrinho do localStorage
+      localStorage.removeItem("carrinho");
+    });
+  </script>
+
+</body>
+</html>
