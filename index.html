@@ -20,7 +20,32 @@
       /* Em telas muito largas, centraliza o conteúdo */
       max-width: 1200px;
       margin: 0 auto;
-      padding-bottom: 80px; /* Espaço para a barra de carrinho fixa */
+      /* Espaço para a barra fixa de carrinho */
+      padding-bottom: 220px;
+    }
+
+    /* Botão “Voltar” */
+    #btn-voltar {
+      background: #ffffff;
+      color: #333;
+      border: 1px solid #ccc;
+      padding: 6px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-bottom: 12px;
+      display: inline-flex;
+      align-items: center;
+      font-size: 0.95rem;
+    }
+    #btn-voltar:hover {
+      background: #f0f0f0;
+    }
+    #btn-voltar svg {
+      margin-right: 6px;
+      width: 16px;
+      height: 16px;
+      fill: currentColor;
+      vertical-align: middle;
     }
 
     h2 {
@@ -47,8 +72,7 @@
       text-align: center;
       display: flex;
       flex-direction: column;
-      /* Garante que o botão fique sempre no final do card,
-         mesmo que o conteúdo interno seja variável */
+      /* Garante que o botão fique no final */
       justify-content: space-between;
     }
 
@@ -58,12 +82,14 @@
       object-fit: cover;
       border-radius: 8px;
       margin-bottom: 12px;
+      background: #e0e0e0;
     }
 
     .card h3 {
       margin-bottom: 8px;
       font-size: 1.1rem;
       color: #333;
+      min-height: 2.4rem; /* reserva espaço caso nome seja pequeno */
     }
 
     .card p {
@@ -95,6 +121,7 @@
       margin-top: 4px;
       font-size: 1rem;
       color: #333;
+      min-height: 1.5rem;
     }
 
     .card button {
@@ -117,7 +144,7 @@
       cursor: default;
     }
 
-    /* Barra fixa de preview do carrinho */
+    /* Barra fixa de preview do carrinho (com inputs de dados do cliente) */
     #carrinho-preview {
       position: fixed;
       bottom: 0;
@@ -126,17 +153,53 @@
       background: #ffffff;
       border-top: 1px solid #ddd;
       padding: 12px 20px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+      display: none; /* Será mostrado quando houver itens no carrinho */
+      flex-direction: column;
+      gap: 8px;
       font-size: 1rem;
       box-shadow: 0 -2px 6px rgba(0,0,0,0.1);
       z-index: 100;
     }
-    #carrinho-preview p {
+
+    /* Container para inputs do cliente */
+    #carrinho-dados-cliente {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    #carrinho-dados-cliente label {
+      font-size: 0.9rem;
+      color: #333;
+      flex: 1 1 100%;
+    }
+    #carrinho-dados-cliente input {
+      flex: 1 1 calc(33% - 10px);
+      padding: 6px 8px;
+      font-size: 0.9rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    /* Mensagens de erro para campos obrigatórios */
+    .erro-campo {
+      color: red;
+      font-size: 0.8rem;
+      margin-top: -6px;
+      margin-bottom: 6px;
+      display: none; /* só aparece quando invalidado */
+    }
+
+    /* Container para info e botão enviar */
+    #carrinho-summary {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    #carrinho-summary p {
       margin: 0;
     }
-    #carrinho-preview button {
+    #carrinho-summary button {
       background: #25d366;
       color: white;
       border: none;
@@ -146,13 +209,17 @@
       font-size: 1rem;
       transition: background 0.2s;
     }
-    #carrinho-preview button:hover {
+    #carrinho-summary button:disabled {
+      background: #cccccc;
+      cursor: not-allowed;
+    }
+    #carrinho-summary button:hover:not(:disabled) {
       background: #1ebe5a;
     }
 
     /* ======= RESPONSIVO ======= */
 
-    /* Em telas até 768px (tablets e celulares grandes), deixa 2 colunas */
+    /* Em telas até 768px (tablets e celulares grandes) */
     @media (max-width: 768px) {
       body {
         padding: 15px;
@@ -187,16 +254,20 @@
         font-size: 0.95rem;
         padding: 8px;
       }
+      /* Carrinho fixo */
       #carrinho-preview {
         padding: 10px 15px;
         font-size: 0.95rem;
       }
-      #carrinho-preview button {
+      #carrinho-dados-cliente input {
+        flex: 1 1 calc(50% - 10px);
+      }
+      #carrinho-summary button {
         font-size: 0.95rem;
       }
     }
 
-    /* Em telas até 480px (celulares), deixa 1 coluna e textos menores */
+    /* Em telas até 480px (celulares) */
     @media (max-width: 480px) {
       body {
         padding: 10px;
@@ -235,6 +306,7 @@
         font-size: 0.9rem;
         padding: 7px;
       }
+      /* Carrinho fixo */
       #carrinho-preview {
         flex-direction: column;
         align-items: flex-start;
@@ -242,7 +314,17 @@
         font-size: 0.9rem;
         padding: 8px 10px;
       }
-      #carrinho-preview button {
+      #carrinho-dados-cliente {
+        flex-direction: column;
+      }
+      #carrinho-dados-cliente input {
+        flex: 1 1 100%;
+      }
+      #carrinho-summary {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      #carrinho-summary button {
         font-size: 0.9rem;
         padding: 6px 12px;
         align-self: stretch;
@@ -252,37 +334,113 @@
 </head>
 <body>
 
+  <!-- Botão Voltar -->
+  <button id="btn-voltar" onclick="history.back()">
+    <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+    Voltar
+  </button>
+
   <h2>🛒 Produtos Disponíveis</h2>
   <div class="grid" id="vitrine"></div>
 
-  <!-- Barra fixa de preview do carrinho -->
-  <div id="carrinho-preview" style="display: none;">
-    <p id="carrinho-info">0 itens no carrinho</p>
-    <button id="btn-enviar-carrinho">Enviar Pedido</button>
+  <!-- Barra fixa de preview do carrinho (com inputs de dados do cliente) -->
+  <div id="carrinho-preview">
+    <!-- Campos de dados do cliente -->
+    <div id="carrinho-dados-cliente">
+      <label for="cliente-nome">Nome do Cliente:</label>
+      <input type="text" id="cliente-nome" placeholder="Ex: João da Silva">
+      <div id="erro-nome" class="erro-campo">Por favor, informe o nome do cliente.</div>
+
+      <label for="cliente-endereco">Endereço:</label>
+      <input type="text" id="cliente-endereco" placeholder="Ex: Rua A, 123">
+      <div id="erro-endereco" class="erro-campo">Por favor, informe o endereço.</div>
+
+      <label for="cliente-referencia">Ponto de Referência:</label>
+      <input type="text" id="cliente-referencia" placeholder="Ex: Próximo ao mercado X">
+      <div id="erro-referencia" class="erro-campo">Por favor, informe o ponto de referência.</div>
+    </div>
+
+    <!-- Resumo e botão enviar -->
+    <div id="carrinho-summary">
+      <p id="carrinho-info">0 itens no carrinho</p>
+      <button id="btn-enviar-carrinho" disabled>Enviar Pedido</button>
+    </div>
   </div>
 
   <script>
+    // Referências a elementos do DOM
     const vitrine = document.getElementById("vitrine");
     const carrinhoPreview = document.getElementById("carrinho-preview");
     const carrinhoInfo = document.getElementById("carrinho-info");
     const btnEnviarCarrinho = document.getElementById("btn-enviar-carrinho");
 
-    // Array que armazenará os itens adicionados ao carrinho
-    // Cada item: { nome, quantidade, valorUnitarioNum, formaPagamento }
+    // Inputs de dados do cliente e mensagens de erro
+    const inputNomeCliente = document.getElementById("cliente-nome");
+    const inputEnderecoCliente = document.getElementById("cliente-endereco");
+    const inputReferenciaCliente = document.getElementById("cliente-referencia");
+    const erroNome = document.getElementById("erro-nome");
+    const erroEndereco = document.getElementById("erro-endereco");
+    const erroReferencia = document.getElementById("erro-referencia");
+
+    // Array que armazena os itens no carrinho
+    // Cada item: { nome, quantidade, valorUnitarioNum, formaPagamento, botaoRef }
     const carrinho = [];
 
-    // Função para atualizar a barra de carrinho fixa
+    // Função para formatar número em moeda “0,00”
+    function formatCurrency(num) {
+      return num.toFixed(2).replace(".", ",");
+    }
+
+    // Função que verifica se todos campos do cliente estão preenchidos
+    function camposClienteValidos() {
+      let ok = true;
+
+      if (inputNomeCliente.value.trim() === "") {
+        erroNome.style.display = "block";
+        ok = false;
+      } else {
+        erroNome.style.display = "none";
+      }
+      if (inputEnderecoCliente.value.trim() === "") {
+        erroEndereco.style.display = "block";
+        ok = false;
+      } else {
+        erroEndereco.style.display = "none";
+      }
+      if (inputReferenciaCliente.value.trim() === "") {
+        erroReferencia.style.display = "block";
+        ok = false;
+      } else {
+        erroReferencia.style.display = "none";
+      }
+
+      return ok;
+    }
+
+    // Função para atualizar a barra de carrinho fixa: mostrar/ocultar e habilitar botões
     function atualizarCarrinhoPreview() {
       if (carrinho.length === 0) {
-        carrinhoPreview.style.display = 'none';
+        carrinhoPreview.style.display = "none";
+        btnEnviarCarrinho.disabled = true;
       } else {
-        carrinhoPreview.style.display = 'flex';
-        // Número de itens distintos no carrinho
+        carrinhoPreview.style.display = "flex";
         carrinhoInfo.textContent = `${carrinho.length} item(s) no carrinho`;
+        // Se os campos do cliente estiverem todos preenchidos, habilita o botão
+        btnEnviarCarrinho.disabled = !camposClienteValidos();
       }
     }
 
-    // Fazer fetch dos produtos no Firebase Realtime Database
+    // Adiciona listener para validar campos do cliente em tempo real
+    [inputNomeCliente, inputEnderecoCliente, inputReferenciaCliente].forEach(input => {
+      input.addEventListener("input", () => {
+        // Só faz sentido habilitar o botão se já tiver itens no carrinho
+        if (carrinho.length > 0) {
+          btnEnviarCarrinho.disabled = !camposClienteValidos();
+        }
+      });
+    });
+
+    // Buscar produtos no Firebase Realtime Database via REST
     const FIREBASE_URL = "https://mercado-8d654-default-rtdb.firebaseio.com";
     fetch(`${FIREBASE_URL}/mercadorias.json`)
       .then(res => {
@@ -295,24 +453,20 @@
           return;
         }
 
+        // A estrutura do objeto 'data' é { UID1: { IDitem: {produto, quantidade, valor, imagem}, ... }, UID2: { ... } }
         Object.values(data).forEach(userNode => {
           Object.values(userNode).forEach(item => {
             const imagem = item.imagem || "https://via.placeholder.com/300x150?text=Sem+Imagem";
             const nome = item.produto || "Sem Nome";
             const quantidadeDisponivel = parseInt(item.quantidade || "1", 10);
-            // Transforma string "valor" em número (assumindo vírgula como separador)
+            // Converte string "valor" com vírgula em número
             const valorUnitarioNum = Number((item.valor || "0,00").replace(".", "").replace(",", "."));
 
-            // Função para formatar número em "0,00"
-            function formatCurrency(num) {
-              return num.toFixed(2).replace(".", ",");
-            }
-
-            // Cria o card
+            // Cria o elemento card
             const card = document.createElement("div");
             card.className = "card";
             card.innerHTML = `
-              <img src="${imagem}">
+              <img src="${imagem}" alt="${nome}">
               <h3>${nome}</h3>
               <p>Disponível: ${quantidadeDisponivel}</p>
               <p>R$ ${formatCurrency(valorUnitarioNum)} (unitário)</p>
@@ -343,9 +497,13 @@
             `;
             vitrine.appendChild(card);
 
-            // Atualiza o total quando a quantidade mudar
+            // Referências dentro do card
             const inputQuantidade = card.querySelector(".quantidade-input");
             const totalParagrafo = card.querySelector(".total");
+            const btnCarrinho = card.querySelector(".btn-carrinho");
+            btnCarrinho.style.transition = "background 0.2s";
+
+            // Atualiza o total do próprio card ao mudar quantidade
             inputQuantidade.addEventListener("input", () => {
               let qtd = parseInt(inputQuantidade.value, 10);
               if (isNaN(qtd) || qtd < 1) qtd = 1;
@@ -355,21 +513,21 @@
               totalParagrafo.textContent = `Total: R$ ${formatCurrency(totalNum)}`;
             });
 
-            // Gerenciar clique no botão “Adicionar ao carrinho”
-            const btnCarrinho = card.querySelector(".btn-carrinho");
+            // Gerencia clique em “Adicionar ao carrinho” / “Remover do carrinho”
             btnCarrinho.addEventListener("click", () => {
-              const quantidade = parseInt(inputQuantidade.value, 10);
+              const quantidadeEscolhida = parseInt(inputQuantidade.value, 10);
               const formaPagto = card.querySelector(".pagamento-select").value;
 
               // Verifica se já existe esse produto no carrinho
               const idx = carrinho.findIndex(prod => prod.nome === nome);
               if (idx === -1) {
-                // Adiciona novo item ao carrinho
+                // Adiciona ao carrinho
                 carrinho.push({
                   nome: nome,
-                  quantidade: quantidade,
+                  quantidade: quantidadeEscolhida,
                   valorUnitarioNum: valorUnitarioNum,
-                  formaPagamento: formaPagto
+                  formaPagamento: formaPagto,
+                  botaoRef: btnCarrinho
                 });
                 btnCarrinho.textContent = "Remover do carrinho";
                 btnCarrinho.classList.add("adicionado");
@@ -379,7 +537,6 @@
                 btnCarrinho.textContent = "Adicionar ao carrinho";
                 btnCarrinho.classList.remove("adicionado");
               }
-
               atualizarCarrinhoPreview();
             });
           });
@@ -390,18 +547,36 @@
         vitrine.innerHTML = "<p style='text-align:center; color:red;'>Erro ao carregar produtos.</p>";
       });
 
-    // Ao clicar em “Enviar Pedido” na barra fixa:
+    // Ao clicar em “Enviar Pedido”
     btnEnviarCarrinho.addEventListener("click", () => {
+      // Se não houver itens, não faz nada
       if (carrinho.length === 0) return;
 
-      // Monta a mensagem com todos os itens e subtotais
-      let mensagem = `Olá! Gostaria de fazer o pedido dos seguintes produtos:%0A%0A`;
+      // Valide novamente os campos do cliente
+      if (!camposClienteValidos()) {
+        return;
+      }
+
+      // Leia dados do cliente
+      const nomeCliente = inputNomeCliente.value.trim();
+      const enderecoCliente = inputEnderecoCliente.value.trim();
+      const referenciaCliente = inputReferenciaCliente.value.trim();
+
+      // Monta a mensagem com dados do cliente
+      let mensagem = "Olá! Seguem os dados do cliente:%0A";
+      mensagem += `👤 Nome: ${nomeCliente}%0A`;
+      mensagem += `🏠 Endereço: ${enderecoCliente}%0A`;
+      mensagem += `📍 Referência: ${referenciaCliente}%0A%0A`;
+
+      // Monta a lista de itens e subtotais
+      mensagem += "🛒 Pedido de Produtos:%0A%0A";
       let valorTotalGeral = 0;
 
       carrinho.forEach((produto, index) => {
         const { nome, quantidade, valorUnitarioNum, formaPagamento } = produto;
         const subtotal = valorUnitarioNum * quantidade;
         valorTotalGeral += subtotal;
+
         mensagem +=
           `▶ ${nome}%0A` +
           `   - Quantidade: ${quantidade}%0A` +
@@ -410,13 +585,27 @@
           `   - Forma de Pagamento: ${formaPagamento}%0A%0A`;
       });
 
-      mensagem += `Valor Total Geral: R$ ${valorTotalGeral.toFixed(2).replace(".", ",")}`;
+      mensagem += `💰 Valor Total Geral: R$ ${valorTotalGeral.toFixed(2).replace(".", ",")}`;
 
+      // Abre o WhatsApp Web/Mobile com a mensagem completa
       const numeroLoja = "5581995038049";
       const url = `https://wa.me/${numeroLoja}?text=${mensagem}`;
-
       window.open(url, "_blank");
+
+      // Limpa o carrinho (remove o estado “adicionado” de todos os botões)
+      carrinho.forEach(item => {
+        item.botaoRef.textContent = "Adicionar ao carrinho";
+        item.botaoRef.classList.remove("adicionado");
+      });
+      carrinho.length = 0; // esvazia array
+      atualizarCarrinhoPreview();
+
+      // Limpa os campos do cliente
+      inputNomeCliente.value = "";
+      inputEnderecoCliente.value = "";
+      inputReferenciaCliente.value = "";
     });
   </script>
+
 </body>
 </html>
